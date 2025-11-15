@@ -1,0 +1,267 @@
+@startuml Concesionaria
+
+' Configuración de estilos
+skinparam classAttributeIconSize 0
+skinparam backgroundColor #FFFFFF
+skinparam class {
+    BackgroundColor<<abstract>> #E6F3FF
+    BackgroundColor<<interface>> #FFF9E6
+    BackgroundColor<<enum>> #E6FFE6
+    BorderColor #333333
+    ArrowColor #333333
+}
+
+' ==================== ENUMERATIVOS ====================
+package "diseno.enums" {
+    enum ColorVehiculo <<enum>> {
+        BLANCO
+        NEGRO
+        GRIS
+        ROJO
+        AZUL
+        PLATA
+        VERDE
+        AMARILLO
+        --
+        +getDescripcion(): String
+    }
+    
+    enum TipoCarroceria <<enum>> {
+        SEDAN
+        HATCHBACK
+        SUV
+        PICKUP
+        COUPE
+        FAMILIAR
+        --
+        +getDescripcion(): String
+    }
+    
+    enum TipoMotocicleta <<enum>> {
+        DEPORTIVA
+        CRUCERO
+        TOURING
+        ENDURO
+        SCOOTER
+        NAKED
+        --
+        +getDescripcion(): String
+    }
+    
+    enum EstadoVehiculo <<enum>> {
+        NUEVO
+        USADO
+        --
+        +getDescripcion(): String
+    }
+}
+
+' ==================== INTERFACES ====================
+package "diseno.interfaces" {
+    interface Mantenible <<interface>> {
+        +realizarMantenimiento(): void
+        +tieneMantenimientoRealizado(): boolean
+    }
+    
+    interface Lavable <<interface>> {
+        +lavar(): void
+        +detallar(): void
+        +estaLavado(): boolean
+    }
+    
+    interface ServicioTaller <<interface>> {
+        +ingresarVehiculo(vehiculo: Object): void
+        +siguienteVehiculo(): Object
+        +cantidadEnEspera(): int
+        +tieneVehiculosEnEspera(): boolean
+    }
+    
+    interface "Persistible<T>" as Persistible <<interface>> {
+        +guardar(datos: List<T>): void
+        +cargar(): List<T>
+    }
+}
+
+' ==================== MODELO ====================
+package "diseno.modelo" {
+    abstract class Vehiculo <<abstract>> {
+        -id: String
+        -marca: String
+        -modelo: String
+        -anio: Integer
+        -color: ColorVehiculo
+        -estado: EstadoVehiculo
+        -kilometraje: Integer
+        --
+        +{abstract} getTipoVehiculo(): String
+        +{abstract} obtenerDetallesEspecificos(): String
+        +esUsado(): boolean
+        +getters/setters()
+    }
+    
+    class Automovil {
+        -carroceria: TipoCarroceria
+        -mantenimientoRealizado: boolean
+        -lavado: boolean
+        --
+        +getTipoVehiculo(): String
+        +obtenerDetallesEspecificos(): String
+        +realizarMantenimiento(): void
+        +lavar(): void
+        +detallar(): void
+    }
+    
+    class Camioneta {
+        -carroceria: TipoCarroceria
+        -mantenimientoRealizado: boolean
+        -lavado: boolean
+        --
+        +getTipoVehiculo(): String
+        +obtenerDetallesEspecificos(): String
+        +realizarMantenimiento(): void
+        +lavar(): void
+        +detallar(): void
+    }
+    
+    class Motocicleta {
+        -tipoMoto: TipoMotocicleta
+        -mantenimientoRealizado: boolean
+        -lavado: boolean
+        --
+        +getTipoVehiculo(): String
+        +obtenerDetallesEspecificos(): String
+        +realizarMantenimiento(): void
+        +lavar(): void
+        +detallar(): void
+    }
+}
+
+' ==================== GENÉRICOS ====================
+package "diseno.repositorio" {
+    class "RepositorioGenerico<T>" as RepositorioGenerico {
+        -elementos: Map<String, T>
+        --
+        +agregar(id: String, elemento: T): void
+        +buscar(id: String): T
+        +actualizar(id: String, elemento: T): void
+        +eliminar(id: String): void
+        +listarTodos(): List<T>
+        +existe(id: String): boolean
+    }
+}
+
+package "diseno.cola" {
+    class "ColaGenerica<T>" as ColaGenerica {
+        -cola: Queue<T>
+        --
+        +encolar(elemento: T): void
+        +desencolar(): T
+        +verPrimero(): T
+        +estaVacia(): boolean
+        +tamanio(): int
+    }
+}
+
+' ==================== PERSISTENCIA ====================
+package "diseno.persistencia" {
+    class "PersistenciaArchivo<T>" as PersistenciaArchivo {
+        -rutaArchivo: String
+        --
+        +guardar(datos: List<T>): void
+        +cargar(): List<T>
+        +existeArchivo(): boolean
+        +eliminarArchivo(): void
+    }
+}
+
+' ==================== NEGOCIO ====================
+package "negocio" {
+    class GestorConcesionaria {
+        -repositorio: RepositorioGenerico<Vehiculo>
+        -taller: TallerRevision
+        -persistencia: PersistenciaArchivo<Vehiculo>
+        --
+        +agregarVehiculo(vehiculo: Vehiculo): void
+        +buscarVehiculo(id: String): Vehiculo
+        +listarTodos(): List<Vehiculo>
+        +actualizarVehiculo(id: String, vehiculo: Vehiculo): void
+        +eliminarVehiculo(id: String): void
+        +ingresarVehiculoAlTaller(id: String): void
+        +procesarVehiculoTaller(): void
+        +obtenerEstadisticas(): Map<String, Integer>
+    }
+}
+
+package "negocio.taller" {
+    class TallerRevision {
+        -colaEspera: ColaGenerica<Vehiculo>
+        -lavadero: Lavadero
+        --
+        +ingresarVehiculo(vehiculo: Object): void
+        +siguienteVehiculo(): Object
+        +procesarVehiculo(): void
+        +cantidadEnEspera(): int
+    }
+    
+    class Lavadero {
+        --
+        +procesarVehiculo(vehiculo: Vehiculo): void
+        +lavarVehiculo(vehiculo: Vehiculo): void
+        +detallarVehiculo(vehiculo: Vehiculo): void
+    }
+}
+
+' ==================== PRESENTACIÓN ====================
+package "presentacion" {
+    class MenuPrincipal {
+        -gestor: GestorConcesionaria
+        -scanner: Scanner
+        --
+        +iniciar(): void
+        -mostrarMenuPrincipal(): void
+        -procesarOpcion(opcion: int): void
+        -agregarVehiculo(): void
+        -buscarVehiculo(): void
+        -listarTodos(): void
+    }
+}
+
+' ==================== RELACIONES DE HERENCIA ====================
+Vehiculo <|-- Automovil
+Vehiculo <|-- Camioneta
+Vehiculo <|-- Motocicleta
+
+' ==================== IMPLEMENTACIÓN DE INTERFACES ====================
+Mantenible <|.. Automovil
+Lavable <|.. Automovil
+Mantenible <|.. Camioneta
+Lavable <|.. Camioneta
+Mantenible <|.. Motocicleta
+Lavable <|.. Motocicleta
+
+ServicioTaller <|.. TallerRevision
+Persistible <|.. PersistenciaArchivo
+
+' ==================== RELACIONES DE COMPOSICIÓN ====================
+Vehiculo *-- ColorVehiculo
+Vehiculo *-- EstadoVehiculo
+Automovil *-- TipoCarroceria
+Camioneta *-- TipoCarroceria
+Motocicleta *-- TipoMotocicleta
+
+GestorConcesionaria *-- RepositorioGenerico
+GestorConcesionaria *-- TallerRevision
+GestorConcesionaria *-- PersistenciaArchivo
+
+TallerRevision *-- ColaGenerica
+TallerRevision *-- Lavadero
+
+MenuPrincipal o-- GestorConcesionaria
+
+' ==================== DEPENDENCIAS ====================
+TallerRevision ..> Vehiculo : uses
+Lavadero ..> Vehiculo : uses
+RepositorioGenerico ..> Vehiculo : stores
+ColaGenerica ..> Vehiculo : stores
+
+@enduml
