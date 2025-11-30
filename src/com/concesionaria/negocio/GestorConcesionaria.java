@@ -25,6 +25,14 @@ public class GestorConcesionaria {
     public void agregarVehiculo(Vehiculo vehiculo) throws VehiculoException {
         validarVehiculo(vehiculo);
         repositorio.agregar(vehiculo.getId(), vehiculo);
+        if (vehiculo.esUsado()) {
+            try {
+                taller.ingresarVehiculo(vehiculo);
+            } catch (TallerException e) {
+                // No debería ocurrir si la lógica es correcta
+                System.err.println("Error inesperado al ingresar al taller: " + e.getMessage());
+            }
+        }
         guardarDatos();
     }
     
@@ -63,10 +71,6 @@ public class GestorConcesionaria {
     }
     
     // TALLER
-    public void ingresarVehiculoAlTaller(String id) throws VehiculoException, TallerException {
-        Vehiculo vehiculo = repositorio.buscar(id);
-        taller.ingresarVehiculo(vehiculo);
-    }
     
     public void procesarVehiculoTaller() throws TallerException {
         taller.procesarVehiculo();
@@ -89,9 +93,6 @@ public class GestorConcesionaria {
     private void validarVehiculo(Vehiculo vehiculo) throws DatosInvalidosException {
         if (vehiculo == null) {
             throw new DatosInvalidosException("El vehículo no puede ser nulo");
-        }
-        if (vehiculo.getId() == null || vehiculo.getId().trim().isEmpty()) {
-            throw new DatosInvalidosException("El ID no puede estar vacío");
         }
         if (vehiculo.getMarca() == null || vehiculo.getMarca().trim().isEmpty()) {
             throw new DatosInvalidosException("La marca no puede estar vacía");
@@ -120,13 +121,19 @@ public class GestorConcesionaria {
     private void cargarDatos() {
         try {
             List<Vehiculo> vehiculos = persistencia.cargar();
+            long maxId = 0;
             for (Vehiculo v : vehiculos) {
                 try {
                     repositorio.agregar(v.getId(), v);
+                    long currentId = Long.parseLong(v.getId());
+                    if (currentId > maxId) {
+                        maxId = currentId;
+                    }
                 } catch (VehiculoDuplicadoException e) {
                     // Ignorar duplicados al cargar
                 }
             }
+            Vehiculo.inicializarContador(maxId + 1);
         } catch (PersistenciaException e) {
             System.err.println("Error al cargar: " + e.getMessage());
         }

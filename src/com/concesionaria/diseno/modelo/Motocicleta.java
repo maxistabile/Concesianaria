@@ -1,7 +1,6 @@
 package com.concesionaria.diseno.modelo;
 
 import com.concesionaria.diseno.enums.ColorVehiculo;
-import com.concesionaria.diseno.enums.EstadoVehiculo;
 import com.concesionaria.diseno.enums.TipoMotocicleta;
 import com.concesionaria.diseno.interfaces.Lavable;
 import com.concesionaria.diseno.interfaces.Mantenible;
@@ -17,10 +16,10 @@ public class Motocicleta extends Vehiculo implements Mantenible, Lavable {
         super();
     }
     
-    public Motocicleta(String id, String marca, String modelo, Integer anio,
-                      ColorVehiculo color, EstadoVehiculo estado, Integer kilometraje,
+    public Motocicleta(String marca, String modelo, Integer anio,
+                      ColorVehiculo color, Integer kilometraje,
                       TipoMotocicleta tipoMoto) {
-        super(id, marca, modelo, anio, color, estado, kilometraje);
+        super(marca, modelo, anio, color, kilometraje);
         this.tipoMoto = tipoMoto;
         this.mantenimientoRealizado = false;
         this.lavado = false;
@@ -77,7 +76,12 @@ public class Motocicleta extends Vehiculo implements Mantenible, Lavable {
     
     @Override
     public String toString() {
-        return super.toString() + " | " + obtenerDetallesEspecificos() +
-               (esUsado() ? " | Mant: " + (mantenimientoRealizado ? "Sí" : "No") : "");
+        String base = super.toString() + " | " + obtenerDetallesEspecificos();
+        String extra = "";
+        if (esUsado()) {
+            extra += " | Mant: " + (mantenimientoRealizado ? "Sí" : "No");
+            extra += " | Lavado: " + (lavado ? "Sí" : "No");
+        }
+        return base + extra;
     }
 }

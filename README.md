@@ -8,7 +8,8 @@ com.concesionaria/
 ├── diseno/
 │   ├── enums/
 │   │   ├── ColorVehiculo.java
-│   │   ├── TipoCarroceria.java
+│   │   ├── TipoCarroceriaAutomovil.java
+│   │   ├── TipoCarroceriaCamioneta.java
 │   │   ├── TipoMotocicleta.java
 │   │   └── EstadoVehiculo.java
 │   ├── excepciones/
@@ -93,7 +94,8 @@ com.concesionaria/
 
 ### ✅ Tipos Enumerativos (3 puntos)
 - `ColorVehiculo`
-- `TipoCarroceria`
+- `TipoCarroceriaAutomovil`
+- `TipoCarroceriaCamioneta`
 - `TipoMotocicleta`
 - `EstadoVehiculo`
 

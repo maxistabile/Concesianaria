@@ -6,7 +6,7 @@ import com.concesionaria.diseno.interfaces.Mantenible;
 import com.concesionaria.diseno.interfaces.ServicioTaller;
 import com.concesionaria.diseno.modelo.Vehiculo;
 
-public class TallerRevision implements ServicioTaller {
+public class TallerRevision implements ServicioTaller<Vehiculo> {
     private ColaGenerica<Vehiculo> colaEspera;
     private Lavadero lavadero;
     
@@ -16,22 +16,16 @@ public class TallerRevision implements ServicioTaller {
     }
     
     @Override
-    public void ingresarVehiculo(Object vehiculo) throws TallerException {
-        if (!(vehiculo instanceof Vehiculo)) {
-            throw new TallerException("El objeto no es un vehículo válido");
-        }
-        
-        Vehiculo v = (Vehiculo) vehiculo;
-        
-        if (!v.esUsado()) {
+    public void ingresarVehiculo(Vehiculo vehiculo) throws TallerException {
+        if (!vehiculo.esUsado()) {
             throw new TallerException("Solo se aceptan vehículos usados en el taller");
         }
         
-        colaEspera.encolar(v);
+        colaEspera.encolar(vehiculo);
     }
     
     @Override
-    public Object siguienteVehiculo() throws TallerException {
+    public Vehiculo siguienteVehiculo() throws TallerException {
         if (!tieneVehiculosEnEspera()) {
             throw new TallerException("No hay vehículos en espera");
         }
@@ -57,7 +51,14 @@ public class TallerRevision implements ServicioTaller {
         
         // Realizar mantenimiento
         if (vehiculo instanceof Mantenible) {
+            System.out.println("\nRealizando mantenimiento en " + vehiculo.getMarca() + " " + vehiculo.getModelo() + "...");
+            try {
+                Thread.sleep(1500); // Simular tiempo de trabajo
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             ((Mantenible) vehiculo).realizarMantenimiento();
+            System.out.println("Mantenimiento completado.");
         }
         
         // Enviar al lavadero

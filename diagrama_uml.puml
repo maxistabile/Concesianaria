@@ -26,13 +26,18 @@ package "diseno.enums" {
         +getDescripcion(): String
     }
     
-    enum TipoCarroceria <<enum>> {
+    enum TipoCarroceriaAutomovil <<enum>> {
         SEDAN
         HATCHBACK
-        SUV
-        PICKUP
         COUPE
         FAMILIAR
+        --
+        +getDescripcion(): String
+    }
+
+    enum TipoCarroceriaCamioneta <<enum>> {
+        SUV
+        PICKUP
         --
         +getDescripcion(): String
     }
@@ -96,11 +101,11 @@ package "diseno.modelo" {
         +{abstract} getTipoVehiculo(): String
         +{abstract} obtenerDetallesEspecificos(): String
         +esUsado(): boolean
-        +getters/setters()
+        +getters()
     }
     
     class Automovil {
-        -carroceria: TipoCarroceria
+        -carroceria: TipoCarroceriaAutomovil
         -mantenimientoRealizado: boolean
         -lavado: boolean
         --
@@ -112,7 +117,7 @@ package "diseno.modelo" {
     }
     
     class Camioneta {
-        -carroceria: TipoCarroceria
+        -carroceria: TipoCarroceriaCamioneta
         -mantenimientoRealizado: boolean
         -lavado: boolean
         --
@@ -179,6 +184,7 @@ package "negocio" {
     class GestorConcesionaria {
         -repositorio: RepositorioGenerico<Vehiculo>
         -taller: TallerRevision
+        -lavadero: Lavadero
         -persistencia: PersistenciaArchivo<Vehiculo>
         --
         +agregarVehiculo(vehiculo: Vehiculo): void
@@ -188,6 +194,8 @@ package "negocio" {
         +eliminarVehiculo(id: String): void
         +ingresarVehiculoAlTaller(id: String): void
         +procesarVehiculoTaller(): void
+        +ingresarVehiculoAlLavadero(id: String): void
+        +procesarVehiculoLavadero(): void
         +obtenerEstadisticas(): Map<String, Integer>
     }
 }
@@ -195,19 +203,20 @@ package "negocio" {
 package "negocio.taller" {
     class TallerRevision {
         -colaEspera: ColaGenerica<Vehiculo>
-        -lavadero: Lavadero
+        --
+        +ingresarVehiculo(vehiculo: Object): void
+        +siguienteVehiculo(): Object
+        +procesarVehiculo(): Vehiculo
+        +cantidadEnEspera(): int
+    }
+    
+    class Lavadero {
+        -colaLavado: ColaGenerica<Vehiculo>
         --
         +ingresarVehiculo(vehiculo: Object): void
         +siguienteVehiculo(): Object
         +procesarVehiculo(): void
         +cantidadEnEspera(): int
-    }
-    
-    class Lavadero {
-        --
-        +procesarVehiculo(vehiculo: Vehiculo): void
-        +lavarVehiculo(vehiculo: Vehiculo): void
-        +detallarVehiculo(vehiculo: Vehiculo): void
     }
 }
 
@@ -240,21 +249,23 @@ Mantenible <|.. Motocicleta
 Lavable <|.. Motocicleta
 
 ServicioTaller <|.. TallerRevision
+ServicioTaller <|.. Lavadero
 Persistible <|.. PersistenciaArchivo
 
 ' ==================== RELACIONES DE COMPOSICIÓN ====================
 Vehiculo *-- ColorVehiculo
 Vehiculo *-- EstadoVehiculo
-Automovil *-- TipoCarroceria
-Camioneta *-- TipoCarroceria
+Automovil *-- TipoCarroceriaAutomovil
+Camioneta *-- TipoCarroceriaCamioneta
 Motocicleta *-- TipoMotocicleta
 
 GestorConcesionaria *-- RepositorioGenerico
 GestorConcesionaria *-- TallerRevision
+GestorConcesionaria *-- Lavadero
 GestorConcesionaria *-- PersistenciaArchivo
 
 TallerRevision *-- ColaGenerica
-TallerRevision *-- Lavadero
+Lavadero *-- ColaGenerica
 
 MenuPrincipal o-- GestorConcesionaria
 

@@ -6,6 +6,7 @@ import java.io.Serializable;
 
 public abstract class Vehiculo implements Serializable {
     private static final long serialVersionUID = 1L;
+    private static long proximoId = 1;
     
     private String id;
     private String marca;
@@ -17,15 +18,15 @@ public abstract class Vehiculo implements Serializable {
     
     public Vehiculo() {}
     
-    public Vehiculo(String id, String marca, String modelo, Integer anio, 
-                   ColorVehiculo color, EstadoVehiculo estado, Integer kilometraje) {
-        this.id = id;
+    public Vehiculo(String marca, String modelo, Integer anio, 
+                   ColorVehiculo color, Integer kilometraje) {
+        this.id = String.valueOf(proximoId++);
         this.marca = marca;
         this.modelo = modelo;
         this.anio = anio;
         this.color = color;
-        this.estado = estado;
         this.kilometraje = kilometraje;
+        this.estado = (kilometraje == 0) ? EstadoVehiculo.NUEVO : EstadoVehiculo.USADO;
     }
     
     // Método abstracto que deben implementar las subclases
@@ -34,7 +35,6 @@ public abstract class Vehiculo implements Serializable {
     
     // Getters y Setters (JavaBean)
     public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
     
     public String getMarca() { return marca; }
     public void setMarca(String marca) { this.marca = marca; }
@@ -49,13 +49,23 @@ public abstract class Vehiculo implements Serializable {
     public void setColor(ColorVehiculo color) { this.color = color; }
     
     public EstadoVehiculo getEstado() { return estado; }
-    public void setEstado(EstadoVehiculo estado) { this.estado = estado; }
     
     public Integer getKilometraje() { return kilometraje; }
-    public void setKilometraje(Integer kilometraje) { this.kilometraje = kilometraje; }
+    public void setKilometraje(Integer kilometraje) { 
+        this.kilometraje = kilometraje;
+        this.estado = (kilometraje == 0) ? EstadoVehiculo.NUEVO : EstadoVehiculo.USADO;
+    }
     
     public boolean esUsado() {
         return estado == EstadoVehiculo.USADO;
+    }
+
+    public static void inicializarContador(long valor) {
+        proximoId = valor;
+    }
+
+    public static void reiniciarContador() {
+        proximoId = 1;
     }
     
     @Override

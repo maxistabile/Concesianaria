@@ -1,16 +1,12 @@
 package com.concesionaria.diseno.enums;
 
-public enum TipoCarroceria {
-    SEDAN("Sedán"),
-    HATCHBACK("Hatchback"),
+public enum TipoCarroceriaCamioneta {
     SUV("SUV"),
-    PICKUP("Pickup"),
-    COUPE("Coupé"),
-    FAMILIAR("Familiar");
+    PICKUP("Pickup");
     
     private final String descripcion;
     
-    TipoCarroceria(String descripcion) {
+    TipoCarroceriaCamioneta(String descripcion) {
         this.descripcion = descripcion;
     }
     

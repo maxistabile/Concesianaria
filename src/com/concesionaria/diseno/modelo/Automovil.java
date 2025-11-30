@@ -1,15 +1,14 @@
 package com.concesionaria.diseno.modelo;
 
 import com.concesionaria.diseno.enums.ColorVehiculo;
-import com.concesionaria.diseno.enums.EstadoVehiculo;
-import com.concesionaria.diseno.enums.TipoCarroceria;
+import com.concesionaria.diseno.enums.TipoCarroceriaAutomovil;
 import com.concesionaria.diseno.interfaces.Lavable;
 import com.concesionaria.diseno.interfaces.Mantenible;
 
 public class Automovil extends Vehiculo implements Mantenible, Lavable {
     private static final long serialVersionUID = 1L;
     
-    private TipoCarroceria carroceria;
+    private TipoCarroceriaAutomovil carroceria;
     private boolean mantenimientoRealizado;
     private boolean lavado;
     
@@ -17,10 +16,10 @@ public class Automovil extends Vehiculo implements Mantenible, Lavable {
         super();
     }
     
-    public Automovil(String id, String marca, String modelo, Integer anio,
-                    ColorVehiculo color, EstadoVehiculo estado, Integer kilometraje,
-                    TipoCarroceria carroceria) {
-        super(id, marca, modelo, anio, color, estado, kilometraje);
+    public Automovil(String marca, String modelo, Integer anio,
+                    ColorVehiculo color, Integer kilometraje,
+                    TipoCarroceriaAutomovil carroceria) {
+        super(marca, modelo, anio, color, kilometraje);
         this.carroceria = carroceria;
         this.mantenimientoRealizado = false;
         this.lavado = false;
@@ -64,8 +63,8 @@ public class Automovil extends Vehiculo implements Mantenible, Lavable {
     }
     
     // Getters y Setters
-    public TipoCarroceria getCarroceria() { return carroceria; }
-    public void setCarroceria(TipoCarroceria carroceria) { this.carroceria = carroceria; }
+    public TipoCarroceriaAutomovil getCarroceria() { return carroceria; }
+    public void setCarroceria(TipoCarroceriaAutomovil carroceria) { this.carroceria = carroceria; }
     
     public boolean isMantenimientoRealizado() { return mantenimientoRealizado; }
     public void setMantenimientoRealizado(boolean mantenimientoRealizado) { 
@@ -77,7 +76,12 @@ public class Automovil extends Vehiculo implements Mantenible, Lavable {
     
     @Override
     public String toString() {
-        return super.toString() + " | " + obtenerDetallesEspecificos() +
-               (esUsado() ? " | Mant: " + (mantenimientoRealizado ? "Sí" : "No") : "");
+        String base = super.toString() + " | " + obtenerDetallesEspecificos();
+        String extra = "";
+        if (esUsado()) {
+            extra += " | Mant: " + (mantenimientoRealizado ? "Sí" : "No");
+            extra += " | Lavado: " + (lavado ? "Sí" : "No");
+        }
+        return base + extra;
     }
 }

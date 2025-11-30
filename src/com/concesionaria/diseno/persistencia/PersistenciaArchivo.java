@@ -54,8 +54,10 @@ public class PersistenciaArchivo<T> implements Persistible<T> {
             ois = new ObjectInputStream(new FileInputStream(archivo));
             return (List<T>) ois.readObject();
             
-        } catch (IOException | ClassNotFoundException e) {
-            throw new PersistenciaException("Error al cargar datos: " + e.getMessage(), e);
+        } catch (IOException | ClassNotFoundException | ClassCastException e) {
+            // Si el archivo es incompatible o corrupto, empezamos de cero.
+            System.out.println("ADVERTENCIA: No se pudieron cargar los datos guardados. Empezando con una lista vacía.");
+            return new ArrayList<>();
         } finally {
             if (ois != null) {
                 try {

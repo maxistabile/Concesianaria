@@ -2,9 +2,9 @@ package com.concesionaria.diseno.interfaces;
 
 import com.concesionaria.diseno.excepciones.TallerException;
 
-public interface ServicioTaller {
-    void ingresarVehiculo(Object vehiculo) throws TallerException;
-    Object siguienteVehiculo() throws TallerException;
+public interface ServicioTaller<T> {
+    void ingresarVehiculo(T vehiculo) throws TallerException;
+    T siguienteVehiculo() throws TallerException;
     int cantidadEnEspera();
     boolean tieneVehiculosEnEspera();
 }

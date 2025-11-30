@@ -8,20 +8,29 @@ public class Lavadero {
     public void procesarVehiculo(Vehiculo vehiculo) {
         if (vehiculo instanceof Lavable) {
             Lavable lavable = (Lavable) vehiculo;
-            lavable.lavar();
+            if (!lavable.estaLavado()) {
+                System.out.println("\nLavando el vehículo...");
+                try {
+                    Thread.sleep(1000);
+                    System.out.println("...");
+                    Thread.sleep(1000);
+                    System.out.println("...");
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                lavable.lavar();
+                System.out.println("Lavado completado.");
+            }
+            
+            System.out.println("\nDetallando y puliendo...");
+            try {
+                Thread.sleep(1500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             lavable.detallar();
-        }
-    }
-    
-    public void lavarVehiculo(Vehiculo vehiculo) {
-        if (vehiculo instanceof Lavable) {
-            ((Lavable) vehiculo).lavar();
-        }
-    }
-    
-    public void detallarVehiculo(Vehiculo vehiculo) {
-        if (vehiculo instanceof Lavable) {
-            ((Lavable) vehiculo).detallar();
+            System.out.println("Vehículo listo para la venta!");
         }
     }
 }
