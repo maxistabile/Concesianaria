@@ -7,6 +7,14 @@ import com.concesionaria.negocio.GestorConcesionaria;
 import java.util.*;
 
 public class MenuPrincipal {
+    private static String createSeparator(int length) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            sb.append("─");
+        }
+        return sb.toString();
+    }
+
     private GestorConcesionaria gestor;
     private Scanner scanner;
 
@@ -167,7 +175,7 @@ public class MenuPrincipal {
         } else {
             for (Vehiculo v : vehiculos) {
                 System.out.println(v.toString());
-                System.out.println("─".repeat(80));
+                System.out.println(createSeparator(80));
             }
         }
     }
@@ -211,7 +219,7 @@ public class MenuPrincipal {
         } else {
             for (Vehiculo v : vehiculos) {
                 System.out.println(v.toString());
-                System.out.println("─".repeat(80));
+                System.out.println(createSeparator(80));
             }
         }
     }
