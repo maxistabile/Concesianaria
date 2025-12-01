@@ -152,14 +152,39 @@ public class GestorConcesionaria {
     // TALLER
     
     public void procesarVehiculoTaller() throws TallerException {
-        Vehiculo vehiculoProcesado = taller.procesarVehiculo(); // Capture the processed vehicle
-        try {
-            repositorio.actualizar(vehiculoProcesado.getId(), vehiculoProcesado); // Update main repository
-        } catch (VehiculoNoEncontradoException e) {
-            System.err.println("Error: El vehículo procesado no se encontró en el repositorio principal. " + e.getMessage());
+    // 1. Sacamos el vehículo de la cola (este objeto puede tener datos viejos, ej: color viejo)
+    // Pero TIENE el estado nuevo de mantenimiento/lavado porque acaba de salir del taller.
+    Vehiculo vehiculoDeLaCola = taller.procesarVehiculo(); 
+    
+    try {
+        // 2. Buscamos la versión "fresca" en el repositorio principal (tiene el color nuevo)
+        Vehiculo vehiculoDelRepo = repositorio.buscar(vehiculoDeLaCola.getId());
+        
+        // 3. PASO CLAVE: Copiamos los flags de "ya atendido" del objeto de la cola al objeto del repo.
+        // Hacemos casting seguro para acceder a los métodos de las interfaces/clases.
+        
+        if (vehiculoDeLaCola instanceof Automovil && vehiculoDelRepo instanceof Automovil) {
+            ((Automovil) vehiculoDelRepo).setMantenimientoRealizado(true); // Asumimos que el taller lo hizo
+            ((Automovil) vehiculoDelRepo).setLavado(true);
+        } else if (vehiculoDeLaCola instanceof Camioneta && vehiculoDelRepo instanceof Camioneta) {
+            ((Camioneta) vehiculoDelRepo).setMantenimientoRealizado(true);
+            ((Camioneta) vehiculoDelRepo).setLavado(true);
+        } else if (vehiculoDeLaCola instanceof Motocicleta && vehiculoDelRepo instanceof Motocicleta) {
+            ((Motocicleta) vehiculoDelRepo).setMantenimientoRealizado(true);
+            ((Motocicleta) vehiculoDelRepo).setLavado(true);
         }
-        guardarDatos(); // Save changes to both
+        
+        // 4. Guardamos la versión del repo (que ahora tiene el color bien Y el mantenimiento hecho)
+        repositorio.actualizar(vehiculoDelRepo.getId(), vehiculoDelRepo); 
+        
+    } catch (VehiculoNoEncontradoException e) {
+        // Caso raro: Alguien borró el auto del sistema mientras estaba en el taller
+        System.err.println("Advertencia: El vehículo procesado ya no existe en el inventario principal.");
     }
+    
+    // 5. Guardamos ambos archivos para que todo quede sincronizado
+    guardarDatos(); 
+}
     
     public int cantidadVehiculosEnTaller() {
         return taller.cantidadEnEspera();
@@ -204,23 +229,40 @@ public class GestorConcesionaria {
     }
     
     private void cargarDatos() {
-        try {
-            List<Vehiculo> vehiculos = persistencia.cargar();
-            for (Vehiculo v : vehiculos) {
-                try {
-                    repositorio.agregar(v.getId(), v);
-                } catch (VehiculoDuplicadoException e) {
-                    // Ignorar duplicados al cargar
+    try {
+        List<Vehiculo> vehiculos = persistencia.cargar();
+        long maxId = 0; // Variable local para rastrear el ID máximo
+
+        for (Vehiculo v : vehiculos) {
+            try {
+                repositorio.agregar(v.getId(), v);
+                
+                // Lógica de cálculo de ID integrada aquí
+                long idActual = Long.parseLong(v.getId());
+                if (idActual > maxId) {
+                    maxId = idActual;
                 }
+            } catch (VehiculoDuplicadoException e) {
+                // Ignorar o loguear
+                throw new RuntimeException("Error crítico de sistema: ID autogenerado colisionó.", e);
+            } catch (NumberFormatException e) {
+                // Manejar IDs corruptos si es necesario
             }
-
-            List<Vehiculo> colaTallerCargada = persistenciaColaTaller.cargar();
-            this.taller = new TallerRevision(colaTallerCargada); // Initialize taller with loaded data
-
-        } catch (PersistenciaException e) {
-            System.err.println("Error al cargar: " + e.getMessage());
         }
+        
+        // Configurar el próximo ID disponible
+        this.proximoIdDisponible = maxId + 1;
+
+        // Carga del taller (sin cambios)
+        List<Vehiculo> colaTallerCargada = persistenciaColaTaller.cargar();
+        this.taller = new TallerRevision(colaTallerCargada);
+
+    } catch (PersistenciaException e) {
+        System.err.println("Error al cargar datos: " + e.getMessage());
+        // Si falla la carga, asegurar que el ID arranque en 1
+        this.proximoIdDisponible = 1; 
     }
+}
     
     // ESTADÍSTICAS (Uso de Wrappers)
     public Map<String, Integer> obtenerEstadisticas() {

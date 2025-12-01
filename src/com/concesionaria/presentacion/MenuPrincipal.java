@@ -168,7 +168,8 @@ public class MenuPrincipal {
         }
 
         System.out.println("\nResumen del vehículo a crear:");
-        System.out.println(vehiculo.toString().replaceFirst("ID: \\\\d+ \\| ", "")); // No mostrar ID temporal
+        // Reemplazamos "ID: null" por un texto más amigable como "(Pendiente)"
+        System.out.println(vehiculo.toString().replace("ID: null |", "ID: (Pendiente) |"));
 
         String confirmar = leerCadena("\n¿Confirma la creación de este vehículo? (S/N): ");
         if (confirmar.equalsIgnoreCase("S")) {
