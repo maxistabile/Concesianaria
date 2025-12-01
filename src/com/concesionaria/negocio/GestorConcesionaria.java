@@ -58,11 +58,28 @@ public class GestorConcesionaria {
     }
     
     // UPDATE
-    public void actualizarVehiculo(String id, Vehiculo vehiculo) throws VehiculoException {
-        validarVehiculo(vehiculo);
-        repositorio.actualizar(id, vehiculo);
-        guardarDatos();
+    public void actualizarVehiculo(String id, Vehiculo vehiculoActualizado) throws VehiculoException {
+    validarVehiculo(vehiculoActualizado);
+    
+    // Recuperar el vehículo viejo para comparar estados
+    Vehiculo vehiculoAnterior = repositorio.buscar(id);
+    boolean eraNuevo = !vehiculoAnterior.esUsado();
+    
+    // Actualizar en repositorio
+    repositorio.actualizar(id, vehiculoActualizado);
+    
+    // Lógica de negocio: Si pasó de Nuevo a Usado, debe ir al taller
+    if (eraNuevo && vehiculoActualizado.esUsado()) {
+        try {
+            taller.ingresarVehiculo(vehiculoActualizado);
+            System.out.println("   [AVISO] El vehículo ahora figura como USADO. Se ha enviado al taller automáticamente.");
+        } catch (TallerException e) {
+             // Ya estaba en el taller o error menor
+        }
     }
+    
+    guardarDatos();
+}
     
     // DELETE
     public void eliminarVehiculo(String id) throws VehiculoException {
