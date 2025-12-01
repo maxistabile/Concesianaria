@@ -6,7 +6,6 @@ import java.io.Serializable;
 
 public abstract class Vehiculo implements Serializable {
     private static final long serialVersionUID = 1L;
-    private static long proximoId = 1;
     
     private String id;
     private String marca;
@@ -20,7 +19,6 @@ public abstract class Vehiculo implements Serializable {
     
     public Vehiculo(String marca, String modelo, Integer anio, 
                    ColorVehiculo color, Integer kilometraje) {
-        this.id = String.valueOf(proximoId++);
         this.marca = marca;
         this.modelo = modelo;
         this.anio = anio;
@@ -35,6 +33,7 @@ public abstract class Vehiculo implements Serializable {
     
     // Getters y Setters (JavaBean)
     public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     
     public String getMarca() { return marca; }
     public void setMarca(String marca) { this.marca = marca; }
@@ -58,14 +57,6 @@ public abstract class Vehiculo implements Serializable {
     
     public boolean esUsado() {
         return estado == EstadoVehiculo.USADO;
-    }
-
-    public static void inicializarContador(long valor) {
-        proximoId = valor;
-    }
-
-    public static void reiniciarContador() {
-        proximoId = 1;
     }
     
     @Override

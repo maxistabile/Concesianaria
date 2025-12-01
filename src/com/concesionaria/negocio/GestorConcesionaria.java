@@ -10,31 +10,93 @@ import java.util.stream.Collectors;
 
 public class GestorConcesionaria {
     private RepositorioGenerico<Vehiculo> repositorio;
-    private TallerRevision taller;
-    private PersistenciaArchivo<Vehiculo> persistencia;
-    private static final String RUTA_ARCHIVO = "data/vehiculos.dat";
-    
-    public GestorConcesionaria() {
-        this.repositorio = new RepositorioGenerico<>();
-        this.taller = new TallerRevision();
-        this.persistencia = new PersistenciaArchivo<>(RUTA_ARCHIVO);
-        cargarDatos();
-    }
-    
-    // CREATE
-    public void agregarVehiculo(Vehiculo vehiculo) throws VehiculoException {
-        validarVehiculo(vehiculo);
-        repositorio.agregar(vehiculo.getId(), vehiculo);
-        if (vehiculo.esUsado()) {
-            try {
-                taller.ingresarVehiculo(vehiculo);
-            } catch (TallerException e) {
-                // No debería ocurrir si la lógica es correcta
-                System.err.println("Error inesperado al ingresar al taller: " + e.getMessage());
+        private TallerRevision taller;
+            private PersistenciaArchivo<Vehiculo> persistencia;
+            private static final String RUTA_ARCHIVO = "data/vehiculos.dat";
+            private static final String RUTA_ARCHIVO_TALLER = "data/cola_taller.dat"; // New file for workshop queue
+            private PersistenciaArchivo<Vehiculo> persistenciaColaTaller; // New persistence for workshop queue
+            private long proximoIdDisponible;        
+                        public GestorConcesionaria() {
+                            this.repositorio = new RepositorioGenerico<>();
+                            this.taller = new TallerRevision(); // Always initialize to prevent NPE
+                            this.persistencia = new PersistenciaArchivo<>(RUTA_ARCHIVO);
+                            this.persistenciaColaTaller = new PersistenciaArchivo<>(RUTA_ARCHIVO_TALLER); // Initialize new persistence
+                            cargarDatos();
+                            calcularProximoIdDisponible(); // Initialize after loading existing data
+                        }        
+            private String generarProximoId() {
+        
+                return String.valueOf(proximoIdDisponible++);
+        
             }
-        }
-        guardarDatos();
-    }
+        
+            
+        
+                // CREATE
+        
+            
+        
+                    public Vehiculo agregarVehiculo(Vehiculo vehiculo) throws VehiculoException {
+        
+            
+        
+                        validarVehiculo(vehiculo);
+        
+            
+        
+                        String nuevoId = generarProximoId();
+        
+            
+        
+                        vehiculo.setId(nuevoId);
+        
+            
+        
+                        repositorio.agregar(vehiculo.getId(), vehiculo);
+        
+            
+        
+                        if (vehiculo.esUsado()) {
+        
+            
+        
+                            try {
+        
+            
+        
+                                taller.ingresarVehiculo(vehiculo);
+        
+            
+        
+                            } catch (TallerException e) {
+        
+            
+        
+                                // No debería ocurrir si la lógica es correcta
+        
+            
+        
+                                System.err.println("Error inesperado al ingresar al taller: " + e.getMessage());
+        
+            
+        
+                            }
+        
+            
+        
+                        }
+        
+            
+        
+                        guardarDatos();
+        
+            
+        
+                        return vehiculo;
+        
+            
+        
+                    }
     
     // READ
     public Vehiculo buscarVehiculo(String id) throws VehiculoNoEncontradoException {
@@ -90,8 +152,13 @@ public class GestorConcesionaria {
     // TALLER
     
     public void procesarVehiculoTaller() throws TallerException {
-        taller.procesarVehiculo();
-        guardarDatos();
+        Vehiculo vehiculoProcesado = taller.procesarVehiculo(); // Capture the processed vehicle
+        try {
+            repositorio.actualizar(vehiculoProcesado.getId(), vehiculoProcesado); // Update main repository
+        } catch (VehiculoNoEncontradoException e) {
+            System.err.println("Error: El vehículo procesado no se encontró en el repositorio principal. " + e.getMessage());
+        }
+        guardarDatos(); // Save changes to both
     }
     
     public int cantidadVehiculosEnTaller() {
@@ -130,6 +197,7 @@ public class GestorConcesionaria {
     private void guardarDatos() {
         try {
             persistencia.guardar(repositorio.listarTodos());
+            persistenciaColaTaller.guardar(taller.getVehiculosEnCola()); // Save workshop queue
         } catch (PersistenciaException e) {
             System.err.println("Error al guardar: " + e.getMessage());
         }
@@ -138,19 +206,17 @@ public class GestorConcesionaria {
     private void cargarDatos() {
         try {
             List<Vehiculo> vehiculos = persistencia.cargar();
-            long maxId = 0;
             for (Vehiculo v : vehiculos) {
                 try {
                     repositorio.agregar(v.getId(), v);
-                    long currentId = Long.parseLong(v.getId());
-                    if (currentId > maxId) {
-                        maxId = currentId;
-                    }
                 } catch (VehiculoDuplicadoException e) {
                     // Ignorar duplicados al cargar
                 }
             }
-            Vehiculo.inicializarContador(maxId + 1);
+
+            List<Vehiculo> colaTallerCargada = persistenciaColaTaller.cargar();
+            this.taller = new TallerRevision(colaTallerCargada); // Initialize taller with loaded data
+
         } catch (PersistenciaException e) {
             System.err.println("Error al cargar: " + e.getMessage());
         }
@@ -176,5 +242,20 @@ public class GestorConcesionaria {
         stats.put("EnTaller", Integer.valueOf(taller.cantidadEnEspera()));
         
         return stats;
+    }
+
+    private void calcularProximoIdDisponible() {
+        long maxId = 0;
+        for (Vehiculo v : repositorio.listarTodos()) {
+            try {
+                long currentId = Long.parseLong(v.getId());
+                if (currentId > maxId) {
+                    maxId = currentId;
+                }
+            } catch (NumberFormatException e) {
+                System.err.println("Error al parsear ID de vehículo: " + v.getId());
+            }
+        }
+        proximoIdDisponible = maxId + 1;
     }
 }

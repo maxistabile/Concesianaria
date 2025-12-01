@@ -1,6 +1,7 @@
 package com.concesionaria.diseno.cola;
 
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 
 public class ColaGenerica<T> {
@@ -32,5 +33,9 @@ public class ColaGenerica<T> {
     
     public void limpiar() {
         cola.clear();
+    }
+
+    public List<T> getElementos() {
+        return new LinkedList<>(cola);
     }
 }

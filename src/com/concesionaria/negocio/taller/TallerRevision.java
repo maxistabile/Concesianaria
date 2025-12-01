@@ -5,6 +5,7 @@ import com.concesionaria.diseno.excepciones.TallerException;
 import com.concesionaria.diseno.interfaces.Mantenible;
 import com.concesionaria.diseno.interfaces.ServicioTaller;
 import com.concesionaria.diseno.modelo.Vehiculo;
+import java.util.List;
 
 public class TallerRevision implements ServicioTaller<Vehiculo> {
     private ColaGenerica<Vehiculo> colaEspera;
@@ -13,6 +14,18 @@ public class TallerRevision implements ServicioTaller<Vehiculo> {
     public TallerRevision() {
         this.colaEspera = new ColaGenerica<>();
         this.lavadero = new Lavadero();
+    }
+
+    public TallerRevision(List<Vehiculo> vehiculosEnCola) {
+        this.colaEspera = new ColaGenerica<>();
+        for (Vehiculo vehiculo : vehiculosEnCola) {
+            this.colaEspera.encolar(vehiculo);
+        }
+        this.lavadero = new Lavadero();
+    }
+
+    public List<Vehiculo> getVehiculosEnCola() {
+        return colaEspera.getElementos();
     }
     
     @Override
@@ -42,7 +55,7 @@ public class TallerRevision implements ServicioTaller<Vehiculo> {
         return !colaEspera.estaVacia();
     }
     
-    public void procesarVehiculo() throws TallerException {
+    public Vehiculo procesarVehiculo() throws TallerException {
         if (!tieneVehiculosEnEspera()) {
             throw new TallerException("No hay vehículos para procesar");
         }
@@ -63,6 +76,8 @@ public class TallerRevision implements ServicioTaller<Vehiculo> {
         
         // Enviar al lavadero
         lavadero.procesarVehiculo(vehiculo);
+
+        return vehiculo;
     }
     
     public Vehiculo verProximoVehiculo() {

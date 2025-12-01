@@ -3,17 +3,13 @@ package com.concesionaria.presentacion;
 import com.concesionaria.diseno.enums.*;
 import com.concesionaria.diseno.excepciones.*;
 import com.concesionaria.diseno.modelo.*;
+import com.concesionaria.diseno.interfaces.Mantenible; // Added
+import com.concesionaria.diseno.interfaces.Lavable;   // Added
 import com.concesionaria.negocio.GestorConcesionaria;
 import java.util.*;
 
 public class MenuPrincipal {
-    private static String createSeparator(int length) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            sb.append("─");
-        }
-        return sb.toString();
-    }
+    
 
     private GestorConcesionaria gestor;
     private Scanner scanner;
@@ -105,37 +101,70 @@ public class MenuPrincipal {
     private void agregarVehiculo() throws VehiculoException {
         System.out.println("\n═══ AGREGAR NUEVO VEHÍCULO ═══\n");
 
-        System.out.println("Seleccione el tipo de vehículo:");
-        System.out.println("  1. Automóvil");
-        System.out.println("  2. Camioneta");
-        System.out.println("  3. Motocicleta");
-        int tipo = leerEntero("Seleccione: ");
+        int tipo;
+        Vehiculo vehiculo = null; // Initialize vehiculo here
 
+        do {
+            System.out.println("Seleccione el tipo de vehículo:");
+            System.out.println("  1. Automóvil");
+            System.out.println("  2. Camioneta");
+            System.out.println("  3. Motocicleta");
+            tipo = leerEntero("Seleccione: ");
+
+            switch (tipo) {
+                case 1:
+                case 2:
+                case 3:
+                    // Valid type, break the loop
+                    break;
+                default:
+                    System.out.println("Tipo de vehículo no válido. Por favor, seleccione 1, 2 o 3.");
+                    // Loop will continue
+            }
+        } while (tipo < 1 || tipo > 3); // Loop until a valid type is entered
+
+        // Only proceed to ask for details if type is valid
         String marca = leerCadena("Marca: ");
         String modelo = leerCadena("Modelo: ");
-        Integer anio = leerEntero("Año de fabricación: ");
+        
+        Integer anio;
+        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+        do {
+            anio = leerEntero("Año de fabricación (entre 1900 y " + (currentYear + 1) + "): ");
+            if (anio < 1900 || anio > (currentYear + 1)) {
+                System.out.println("Año inválido. Por favor, ingrese un año entre 1900 y " + (currentYear + 1) + ".");
+            }
+        } while (anio < 1900 || anio > (currentYear + 1));
 
-        ColorVehiculo color = seleccionarColor();
+        ColorVehiculo color = null;
+        try {
+            color = seleccionarColor();
+        } catch (DatosInvalidosException e) {
+            System.out.println("\nOperación de creación de vehículo cancelada: " + e.getMessage());
+            return;
+        }
+
         Integer km = leerEntero("Kilometraje: ");
 
-        Vehiculo vehiculo = null;
-
         // Crear una instancia temporal para mostrarla antes de confirmar
-        switch (tipo) {
-            case 1:
-                TipoCarroceriaAutomovil carroceriaAutomovil = seleccionarCarroceriaAutomovil();
-                vehiculo = new Automovil(marca, modelo, anio, color, km, carroceriaAutomovil);
-                break;
-            case 2:
-                TipoCarroceriaCamioneta carroceriaCamioneta = seleccionarCarroceriaCamioneta();
-                vehiculo = new Camioneta(marca, modelo, anio, color, km, carroceriaCamioneta);
-                break;
-            case 3:
-                TipoMotocicleta tipoMoto = seleccionarTipoMoto();
-                vehiculo = new Motocicleta(marca, modelo, anio, color, km, tipoMoto);
-                break;
-            default:
-                throw new DatosInvalidosException("Tipo de vehículo no válido.");
+        try { // Added try-catch here
+            switch (tipo) {
+                case 1:
+                    TipoCarroceriaAutomovil carroceriaAutomovil = seleccionarCarroceriaAutomovil();
+                    vehiculo = new Automovil(marca, modelo, anio, color, km, carroceriaAutomovil);
+                    break;
+                case 2:
+                    TipoCarroceriaCamioneta carroceriaCamioneta = seleccionarCarroceriaCamioneta();
+                    vehiculo = new Camioneta(marca, modelo, anio, color, km, carroceriaCamioneta);
+                    break;
+                case 3:
+                    TipoMotocicleta tipoMoto = seleccionarTipoMoto();
+                    vehiculo = new Motocicleta(marca, modelo, anio, color, km, tipoMoto);
+                    break;
+            }
+        } catch (DatosInvalidosException e) { // Catch the exception
+            System.out.println("\nOperación de creación de vehículo cancelada: " + e.getMessage());
+            return;
         }
 
         System.out.println("\nResumen del vehículo a crear:");
@@ -143,8 +172,10 @@ public class MenuPrincipal {
 
         String confirmar = leerCadena("\n¿Confirma la creación de este vehículo? (S/N): ");
         if (confirmar.equalsIgnoreCase("S")) {
-            gestor.agregarVehiculo(vehiculo);
+            // Capture the returned vehicle with its assigned ID
+            vehiculo = gestor.agregarVehiculo(vehiculo); // MODIFIED LINE
             System.out.println("\n¡Vehículo agregado exitosamente!");
+            System.out.println("ID asignado: " + vehiculo.getId()); // NEW LINE
             if (vehiculo.esUsado()) {
                 System.out.println("   Vehículo usado detectado. Ha sido añadido a la cola del taller automáticamente.");
             }
@@ -160,7 +191,9 @@ public class MenuPrincipal {
         try {
             Vehiculo v = gestor.buscarVehiculo(id);
             System.out.println("\nVehículo encontrado:");
-            System.out.println(v.toString());
+            List<Vehiculo> vehiculosEncontrados = new ArrayList<>();
+            vehiculosEncontrados.add(v);
+            imprimirTablaVehiculos(vehiculosEncontrados);
         } catch (VehiculoNoEncontradoException e) {
             System.out.println("\n" + e.getMessage());
         }
@@ -170,14 +203,7 @@ public class MenuPrincipal {
         System.out.println("\n═══ LISTADO COMPLETO DE VEHÍCULOS ═══\n");
         List<Vehiculo> vehiculos = gestor.listarTodos();
 
-        if (vehiculos.isEmpty()) {
-            System.out.println("No hay vehículos registrados en el sistema.");
-        } else {
-            for (Vehiculo v : vehiculos) {
-                System.out.println(v.toString());
-                System.out.println(createSeparator(80));
-            }
-        }
+        imprimirTablaVehiculos(vehiculos);
     }
 
     private void listarPorTipo() {
@@ -214,26 +240,24 @@ public class MenuPrincipal {
         }
 
         System.out.println("\n═══ " + titulo + " ═══\n");
-        if (vehiculos.isEmpty()) {
-            System.out.println("No se encontraron vehículos de este tipo.");
-        } else {
-            for (Vehiculo v : vehiculos) {
-                System.out.println(v.toString());
-                System.out.println(createSeparator(80));
-            }
-        }
+        imprimirTablaVehiculos(vehiculos);
     }
 
     private void actualizarVehiculo() throws VehiculoException {
         System.out.println("\n═══ ACTUALIZAR VEHÍCULO ═══\n");
-
+        if (gestor.listarTodos().isEmpty()) {
+            System.out.println("No hay vehículos registrados para actualizar.");
+            return;
+        }
         listarTodos();
 
         String id = leerCadena("ID del vehículo a actualizar: ");
 
         Vehiculo actual = gestor.buscarVehiculo(id);
         System.out.println("\nVehículo actual:");
-        System.out.println(actual.toString());
+        List<Vehiculo> vehiculoActualList = new ArrayList<>();
+        vehiculoActualList.add(actual);
+        imprimirTablaVehiculos(vehiculoActualList);
 
         System.out.println("\nIngrese los nuevos datos (deje en blanco para no cambiar):");
 
@@ -306,14 +330,19 @@ public class MenuPrincipal {
 
     private void eliminarVehiculo() throws VehiculoException {
         System.out.println("\n═══ ELIMINAR VEHÍCULO ═══\n");
-
+        if (gestor.listarTodos().isEmpty()) {
+            System.out.println("No hay vehículos registrados para actualizar.");
+            return;
+        }
         listarTodos();
 
         String id = leerCadena("ID del vehículo a eliminar: ");
 
         Vehiculo v = gestor.buscarVehiculo(id);
         System.out.println("\nSe eliminará el siguiente vehículo:");
-        System.out.println(v.toString());
+        List<Vehiculo> vehiculosAEliminar = new ArrayList<>();
+        vehiculosAEliminar.add(v);
+        imprimirTablaVehiculos(vehiculosAEliminar);
 
         String confirmar = leerCadena("\n¿Está seguro de que desea eliminarlo? (S/N): ");
         if (confirmar.equalsIgnoreCase("S")) {
@@ -357,7 +386,9 @@ public class MenuPrincipal {
         if (cantidad > 0) {
             Vehiculo proximo = gestor.verProximoVehiculoTaller();
             System.out.println("\nPróximo en la fila:");
-            System.out.println(proximo.toString());
+            List<Vehiculo> proximoVehiculoList = new ArrayList<>();
+            proximoVehiculoList.add(proximo);
+            imprimirTablaVehiculos(proximoVehiculoList);
         }
     }
 
@@ -377,44 +408,84 @@ public class MenuPrincipal {
     }
 
     // Métodos auxiliares
-    private ColorVehiculo seleccionarColor() {
+    private ColorVehiculo seleccionarColor() throws DatosInvalidosException {
         System.out.println("\nSeleccione el color:");
         ColorVehiculo[] colores = ColorVehiculo.values();
         for (int i = 0; i < colores.length; i++) {
             System.out.println("  " + (i + 1) + ". " + colores[i].getDescripcion());
         }
-        int opcion = leerEntero("Seleccione una opción: ");
-        return colores[opcion - 1];
+        
+        int intentos = 0;
+        while (intentos < 3) {
+            int opcion = leerEntero("Seleccione una opción: ");
+            if (opcion >= 1 && opcion <= colores.length) {
+                return colores[opcion - 1];
+            } else {
+                System.out.println("Opción de color inválida. Intento " + (intentos + 1) + " de 3.");
+                intentos++;
+            }
+        }
+        throw new DatosInvalidosException("Demasiados intentos inválidos para seleccionar color. Operación cancelada.");
     }
 
-    private TipoCarroceriaAutomovil seleccionarCarroceriaAutomovil() {
+    private TipoCarroceriaAutomovil seleccionarCarroceriaAutomovil() throws DatosInvalidosException {
         System.out.println("\nSeleccione la carrocería del automóvil:");
         TipoCarroceriaAutomovil[] tipos = TipoCarroceriaAutomovil.values();
         for (int i = 0; i < tipos.length; i++) {
             System.out.println("  " + (i + 1) + ". " + tipos[i].getDescripcion());
         }
-        int opcion = leerEntero("Seleccione una opción: ");
-        return tipos[opcion - 1];
+
+        int intentos = 0;
+        while (intentos < 3) {
+            int opcion = leerEntero("Seleccione una opción: ");
+            if (opcion >= 1 && opcion <= tipos.length) {
+                return tipos[opcion - 1];
+            } else {
+                System.out.println("Opción de carrocería inválida. Intento " + (intentos + 1) + " de 3.");
+                intentos++;
+            }
+        }
+        throw new DatosInvalidosException("Demasiados intentos inválidos para seleccionar carrocería de automóvil. Operación cancelada.");
     }
 
-    private TipoCarroceriaCamioneta seleccionarCarroceriaCamioneta() {
+    private TipoCarroceriaCamioneta seleccionarCarroceriaCamioneta() throws DatosInvalidosException {
         System.out.println("\nSeleccione la carrocería de la camioneta:");
         TipoCarroceriaCamioneta[] tipos = TipoCarroceriaCamioneta.values();
         for (int i = 0; i < tipos.length; i++) {
             System.out.println("  " + (i + 1) + ". " + tipos[i].getDescripcion());
         }
-        int opcion = leerEntero("Seleccione una opción: ");
-        return tipos[opcion - 1];
+        
+        int intentos = 0;
+        while (intentos < 3) {
+            int opcion = leerEntero("Seleccione una opción: ");
+            if (opcion >= 1 && opcion <= tipos.length) {
+                return tipos[opcion - 1];
+            } else {
+                System.out.println("Opción de carrocería inválida. Intento " + (intentos + 1) + " de 3.");
+                intentos++;
+            }
+        }
+        throw new DatosInvalidosException("Demasiados intentos inválidos para seleccionar carrocería de camioneta. Operación cancelada.");
     }
     
-    private TipoMotocicleta seleccionarTipoMoto() {
+    private TipoMotocicleta seleccionarTipoMoto() throws DatosInvalidosException {
         System.out.println("\nSeleccione el tipo de motocicleta:");
         TipoMotocicleta[] tipos = TipoMotocicleta.values();
         for (int i = 0; i < tipos.length; i++) {
             System.out.println("  " + (i+1) + ". " + tipos[i].getDescripcion());
         }
-        int opcion = leerEntero("Seleccione una opción: ");
-        return tipos[opcion - 1];
+        
+        int intentos = 0;
+        while (intentos < 3) {
+            int opcion = leerEntero("Seleccione una opción: ");
+            if (opcion >= 1 && opcion <= tipos.length) {
+                return tipos[opcion - 1];
+            } else {
+                System.out.println("Opción de tipo de motocicleta inválida. Intento " + (intentos + 1) + " de 3.");
+                intentos++;
+            }
+        }
+        throw new DatosInvalidosException("Demasiados intentos inválidos para seleccionar tipo de motocicleta. Operación cancelada.");
     }
     
     private String leerCadena(String mensaje) {
@@ -481,4 +552,53 @@ public class MenuPrincipal {
             }
         }
     }
+    // Agrega este método privado en MenuPrincipal
+private void imprimirTablaVehiculos(List<Vehiculo> vehiculos) {
+    if (vehiculos.isEmpty()) {
+        System.out.println("No hay vehículos para mostrar.");
+        return;
+    }
+
+    // New format string with two extra columns for Mant and Lav
+    String formato = "| %-4s | %-12s | %-15s | %-10s | %-6s | %-10s | %-12s | %-5s | %-6s |%n"; // Added %-5s and %-6s
+
+    // New header line
+    System.out.format("+------+--------------+-----------------+------------+--------+------------+--------------+-------+--------+%n");
+    System.out.format("| ID   | Tipo         | Marca           | Modelo     | Año    | KM         | Estado       | Mant. | Lav.   |%n"); // Added Mant. and Lav.
+    System.out.format("+------+--------------+-----------------+------------+--------+------------+--------------+-------+--------+%n");
+
+    for (Vehiculo v : vehiculos) {
+        String mantenimientoStatus = "N/A";
+        String lavadoStatus = "N/A";
+
+        if (v.esUsado()) {
+            if (v instanceof Mantenible) {
+                mantenimientoStatus = ((Mantenible) v).tieneMantenimientoRealizado() ? "Sí" : "No";
+            }
+            if (v instanceof Lavable) {
+                lavadoStatus = ((Lavable) v).estaLavado() ? "Sí" : "No";
+            }
+        }
+        
+        System.out.format(formato, 
+            v.getId(), 
+            v.getTipoVehiculo(), 
+            cortarString(v.getMarca(), 15), 
+            cortarString(v.getModelo(), 10), 
+            v.getAnio(), 
+            v.getKilometraje(),
+            v.getEstado().getDescripcion(),
+            mantenimientoStatus, // New column
+            lavadoStatus         // New column
+        );
+    }
+    System.out.format("+------+--------------+-----------------+------------+--------+------------+--------------+-------+--------+%n");
+}
+
+// Método auxiliar para que no se rompa la tabla si el texto es muy largo
+private String cortarString(String texto, int largo) {
+    if (texto == null) return "";
+    if (texto.length() > largo) return texto.substring(0, largo - 3) + "...";
+    return texto;
+}
 }
