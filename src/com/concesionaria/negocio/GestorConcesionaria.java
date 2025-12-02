@@ -22,7 +22,6 @@ public class GestorConcesionaria {
                             this.persistencia = new PersistenciaArchivo<>(RUTA_ARCHIVO);
                             this.persistenciaColaTaller = new PersistenciaArchivo<>(RUTA_ARCHIVO_TALLER); // Initialize new persistence
                             cargarDatos();
-                            calcularProximoIdDisponible(); // Initialize after loading existing data
                         }        
             private String generarProximoId() {
         
@@ -32,71 +31,35 @@ public class GestorConcesionaria {
         
             
         
-                // CREATE
-        
-            
-        
-                    public Vehiculo agregarVehiculo(Vehiculo vehiculo) throws VehiculoException {
-        
-            
-        
-                        validarVehiculo(vehiculo);
-        
-            
-        
-                        String nuevoId = generarProximoId();
-        
-            
-        
-                        vehiculo.setId(nuevoId);
-        
-            
-        
-                        repositorio.agregar(vehiculo.getId(), vehiculo);
-        
-            
-        
-                        if (vehiculo.esUsado()) {
-        
-            
-        
-                            try {
-        
-            
-        
-                                taller.ingresarVehiculo(vehiculo);
-        
-            
-        
-                            } catch (TallerException e) {
-        
-            
-        
-                                // No debería ocurrir si la lógica es correcta
-        
-            
-        
-                                System.err.println("Error inesperado al ingresar al taller: " + e.getMessage());
-        
-            
-        
-                            }
-        
-            
-        
-                        }
-        
-            
-        
-                        guardarDatos();
-        
-            
-        
-                        return vehiculo;
-        
-            
-        
-                    }
+// CREATE
+    public Vehiculo agregarVehiculo(Vehiculo vehiculo) throws VehiculoException {
+        validarVehiculo(vehiculo);
+
+        String nuevoId = generarProximoId();
+        vehiculo.setId(nuevoId);
+
+        // --- INICIO DEL CAMBIO ---
+        try {
+            // Intentamos agregar. Si falla, es un error interno grave del autoincremental.
+            repositorio.agregar(vehiculo.getId(), vehiculo);
+        } catch (VehiculoDuplicadoException e) {
+            // Lo convertimos en un error de sistema (Runtime) para no obligar al Menú a manejarlo.
+            throw new RuntimeException("Error crítico interno: El sistema generó un ID duplicado (" + nuevoId + ").", e);
+        }
+        // --- FIN DEL CAMBIO ---
+
+        if (vehiculo.esUsado()) {
+            try {
+                taller.ingresarVehiculo(vehiculo);
+            } catch (TallerException e) {
+                // No debería ocurrir si la lógica es correcta
+                System.err.println("Error inesperado al ingresar al taller: " + e.getMessage());
+            }
+        }
+
+        guardarDatos();
+        return vehiculo;
+    }
     
     // READ
     public Vehiculo buscarVehiculo(String id) throws VehiculoNoEncontradoException {
@@ -303,20 +266,5 @@ public class GestorConcesionaria {
         stats.put("EnTaller", Integer.valueOf(taller.cantidadEnEspera()));
         
         return stats;
-    }
-
-    private void calcularProximoIdDisponible() {
-        long maxId = 0;
-        for (Vehiculo v : repositorio.listarTodos()) {
-            try {
-                long currentId = Long.parseLong(v.getId());
-                if (currentId > maxId) {
-                    maxId = currentId;
-                }
-            } catch (NumberFormatException e) {
-                System.err.println("Error al parsear ID de vehículo: " + v.getId());
-            }
-        }
-        proximoIdDisponible = maxId + 1;
     }
 }

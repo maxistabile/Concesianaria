@@ -109,6 +109,7 @@ public class MenuPrincipal {
             System.out.println("  1. Automóvil");
             System.out.println("  2. Camioneta");
             System.out.println("  3. Motocicleta");
+            System.out.println("  0. Volver al Menú Principal");
             tipo = leerEntero("Seleccione: ");
 
             switch (tipo) {
@@ -117,6 +118,9 @@ public class MenuPrincipal {
                 case 3:
                     // Valid type, break the loop
                     break;
+                case 0:
+                    System.out.println("Volviendo al menú principal...");
+                    return;
                 default:
                     System.out.println("Tipo de vehículo no válido. Por favor, seleccione 1, 2 o 3.");
                     // Loop will continue
@@ -187,7 +191,7 @@ public class MenuPrincipal {
 
     private void buscarVehiculo() {
         System.out.println("\n═══ BUSCAR VEHÍCULO ═══\n");
-        String id = leerCadena("Ingrese el ID del vehículo: ");
+        String id = leerCadena("Ingrese el ID del vehículo(0 para volver): ");
 
         try {
             Vehiculo v = gestor.buscarVehiculo(id);
@@ -252,7 +256,7 @@ public class MenuPrincipal {
         }
         listarTodos();
 
-        String id = leerCadena("ID del vehículo a actualizar: ");
+        String id = leerCadena("ID del vehículo a actualizar(0 para volver): ");
 
         Vehiculo actual = gestor.buscarVehiculo(id);
         System.out.println("\nVehículo actual:");
@@ -262,11 +266,11 @@ public class MenuPrincipal {
 
         System.out.println("\nIngrese los nuevos datos (deje en blanco para no cambiar):");
 
-        String marca = leerCadena("Marca [" + actual.getMarca() + "]: ");
+        String marca = leerCadenaOpcional("Marca [" + actual.getMarca() + "]: ");
         if (!marca.isEmpty())
             actual.setMarca(marca);
 
-        String modelo = leerCadena("Modelo [" + actual.getModelo() + "]: ");
+        String modelo = leerCadenaOpcional("Modelo [" + actual.getModelo() + "]: ");
         if (!modelo.isEmpty())
             actual.setModelo(modelo);
 
@@ -337,7 +341,7 @@ public class MenuPrincipal {
         }
         listarTodos();
 
-        String id = leerCadena("ID del vehículo a eliminar: ");
+        String id = leerCadena("ID del vehículo a eliminar(0 para volver): ");
 
         Vehiculo v = gestor.buscarVehiculo(id);
         System.out.println("\nSe eliminará el siguiente vehículo:");
@@ -529,6 +533,11 @@ public class MenuPrincipal {
             System.out.println("Debe ingresar un número válido.");
             return leerEnteroOpcional(mensaje);
         }
+    }
+    // Método que permite texto vacío (para actualizaciones)
+    private String leerCadenaOpcional(String mensaje) {
+        System.out.print(mensaje);
+        return scanner.nextLine().trim();
     }
 
     private void esperarEnter() {
