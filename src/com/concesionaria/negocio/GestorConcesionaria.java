@@ -7,29 +7,47 @@ import com.concesionaria.diseno.repositorio.RepositorioGenerico;
 import com.concesionaria.negocio.taller.TallerRevision;
 import java.util.*;
 import java.util.stream.Collectors;
-
+/**
+ * Clase controladora principal del sistema (Business Logic).
+ * Se encarga de coordinar la persistencia, el repositorio de memoria y la lógica del taller.
+ * Implementa el patrón Singleton implícito al ser instanciada una única vez por el Main.
+ */
 public class GestorConcesionaria {
     private RepositorioGenerico<Vehiculo> repositorio;
         private TallerRevision taller;
+            // Persistencia separada para inventario y cola de espera
             private PersistenciaArchivo<Vehiculo> persistencia;
             private static final String RUTA_ARCHIVO = "data/vehiculos.dat";
-            private static final String RUTA_ARCHIVO_TALLER = "data/cola_taller.dat"; 
-            private PersistenciaArchivo<String> persistenciaColaTaller; 
+            private static final String RUTA_ARCHIVO_TALLER = "data/cola_taller.dat";  
+            private PersistenciaArchivo<String> persistenciaColaTaller; // Guarda solo IDs
             private long proximoIdDisponible;        
                         public GestorConcesionaria() {
                             this.repositorio = new RepositorioGenerico<>();
                             this.taller = new TallerRevision(); 
                             this.persistencia = new PersistenciaArchivo<>(RUTA_ARCHIVO);
                             this.persistenciaColaTaller = new PersistenciaArchivo<>(RUTA_ARCHIVO_TALLER); 
-                            cargarDatos();
-                        }        
+                            cargarDatos(); // Carga inicial y configuración de IDs
+                        } 
+            /**
+             * Genera un ID único basado en el último ID registrado en el sistema.
+             * @return El nuevo ID como String.
+            */                   
             private String generarProximoId() {
         
                 return String.valueOf(proximoIdDisponible++);
         
             }
         
-            
+    // ==================== ABM (CRUD) ====================
+
+    /**
+     * Registra un nuevo vehículo en el sistema.
+     * Si el vehículo es usado, se deriva automáticamente a la cola del taller.
+     * * @param vehiculo El objeto vehículo con los datos cargados (sin ID).
+     * @return El objeto vehículo con el ID asignado.
+     * @throws VehiculoException Si los datos no son válidos.
+     * @throws RuntimeException Si ocurre un error interno en la generación de IDs.
+     */        
         
 
     public Vehiculo agregarVehiculo(Vehiculo vehiculo) throws VehiculoException {
@@ -40,14 +58,14 @@ public class GestorConcesionaria {
 
         
         try {
-            // Intentamos agregar. Si falla, es un error interno grave del autoincremental.
+            // La validación de duplicados es interna ya que el ID es autogenerado.
             repositorio.agregar(vehiculo.getId(), vehiculo);
         } catch (VehiculoDuplicadoException e) {
-            // Lo convertimos en un error de sistema (Runtime) para no obligar al Menú a manejarlo.
+            
             throw new RuntimeException("Error crítico interno: El sistema generó un ID duplicado (" + nuevoId + ").", e);
         }
         
-
+        // Lógica de Negocio: Autos usados van al taller obligatoriamente
         if (vehiculo.esUsado()) {
             try {
                 taller.ingresarVehiculo(vehiculo);
@@ -61,7 +79,12 @@ public class GestorConcesionaria {
         return vehiculo;
     }
     
-    
+    /**
+     * Busca un vehículo por su identificador único.
+     * @param id El ID del vehículo a buscar.
+     * @return El objeto Vehiculo encontrado.
+     * @throws VehiculoNoEncontradoException Si no existe un vehículo con ese ID.
+     */
     public Vehiculo buscarVehiculo(String id) throws VehiculoNoEncontradoException {
         return repositorio.buscar(id);
     }
@@ -69,7 +92,11 @@ public class GestorConcesionaria {
     public List<Vehiculo> listarTodos() {
         return repositorio.listarTodos();
     }
-    
+    /**
+     * Filtra el inventario por una clase específica (Polimorfismo).
+     * @param tipo La clase del vehículo (ej: Automovil.class).
+     * @return Lista de vehículos que coinciden con el tipo.
+     */
     public List<Vehiculo> listarPorTipo(Class<? extends Vehiculo> tipo) {
         return repositorio.listarTodos().stream()
                 .filter(v -> tipo.isInstance(v))
@@ -82,7 +109,10 @@ public class GestorConcesionaria {
                 .collect(Collectors.toList());
     }
     
-    
+    /**
+     * Actualiza los datos de un vehículo existente.
+     * Si un vehículo cambia de estado NUEVO a USADO, se envía al taller.
+     */
     public void actualizarVehiculo(String id, Vehiculo vehiculoActualizado) throws VehiculoException {
     validarVehiculo(vehiculoActualizado);
     
@@ -99,7 +129,7 @@ public class GestorConcesionaria {
             taller.ingresarVehiculo(vehiculoActualizado);
             System.out.println("   [AVISO] El vehículo ahora figura como USADO. Se ha enviado al taller automáticamente.");
         } catch (TallerException e) {
-             // Ya estaba en el taller o error menor
+             // Ignorar si ya estaba en cola
         }
     }
     
@@ -112,18 +142,23 @@ public class GestorConcesionaria {
         guardarDatos();
     }
     
-    // TALLER
-    
+    // ==================== TALLER ====================
+
+    /**
+     * Procesa el siguiente vehículo en la cola de espera.
+     * Realiza la sincronización de estado entre el objeto en cola y el objeto en repositorio.
+     */
     public void procesarVehiculoTaller() throws TallerException {
-    
+    // 1. Extraer de la cola (FIFO)
     Vehiculo vehiculoDeLaCola = taller.procesarVehiculo(); 
     
     try {
-        
+        // 2. Sincronización: Buscar la instancia "viva" en el repositorio
+        // Esto evita que datos obsoletos de la cola sobrescriban cambios recientes del inventario.
         Vehiculo vehiculoDelRepo = repositorio.buscar(vehiculoDeLaCola.getId());
         
        
-        
+        // 3. Actualizar flags de servicio (Mantenimiento/Lavado)
         if (vehiculoDeLaCola instanceof Automovil && vehiculoDelRepo instanceof Automovil) {
             ((Automovil) vehiculoDelRepo).setMantenimientoRealizado(true); // Asumimos que el taller lo hizo
             ((Automovil) vehiculoDelRepo).setLavado(true);
@@ -135,7 +170,7 @@ public class GestorConcesionaria {
             ((Motocicleta) vehiculoDelRepo).setLavado(true);
         }
         
-        
+        // 4. Persistir el cambio de estado en el repositorio
         repositorio.actualizar(vehiculoDelRepo.getId(), vehiculoDelRepo); 
         
     } catch (VehiculoNoEncontradoException e) {
@@ -146,6 +181,7 @@ public class GestorConcesionaria {
     //  Guardamos ambos archivos para que todo quede sincronizado
     guardarDatos(); 
 }
+    // Métodos delegados al Taller
     public List<Vehiculo> obtenerVehiculosEnCola() {
     return taller.getVehiculosEnCola();
     }    
@@ -163,8 +199,9 @@ public class GestorConcesionaria {
         return taller.verProximoVehiculo();
     }
     
-    // VALIDACIÓN
+    // ==================== PERSISTENCIA Y CONFIGURACIÓN ====================
     private void validarVehiculo(Vehiculo vehiculo) throws DatosInvalidosException {
+        // Validaciones de integridad de datos obligatorias
         if (vehiculo == null) {
             throw new DatosInvalidosException("El vehículo no puede ser nulo");
         }
@@ -183,7 +220,12 @@ public class GestorConcesionaria {
         }
     }
     
-    // PERSISTENCIA
+    /**
+     * Guarda el estado completo del sistema en archivos binarios.
+     * Estrategia:
+     * - vehiculos.dat: Guarda los objetos completos.
+     * - cola_taller.dat: Guarda solo los IDs para evitar redundancia y desincronización.
+     */
     private void guardarDatos() {
     try {
         // 1. Guardamos el inventario completo (Objetos reales)
@@ -201,7 +243,10 @@ public class GestorConcesionaria {
         System.err.println("Error al guardar: " + e.getMessage());
     }
 }
-    
+    /**
+     * Carga los datos iniciales y reconstruye el estado del sistema.
+     * Calcula el próximo ID disponible basado en los datos cargados.
+     */
     private void cargarDatos() {
     try {
         // 1. Cargar Inventario Principal
@@ -212,7 +257,7 @@ public class GestorConcesionaria {
             try {
                 repositorio.agregar(v.getId(), v);
                 
-                // Cálculo de ID máximo integrado
+                // Detección automática del último ID
                 long idActual = Long.parseLong(v.getId());
                 if (idActual > maxId) {
                     maxId = idActual;
@@ -229,10 +274,11 @@ public class GestorConcesionaria {
         
         for (String id : idsEnCola) {
             try {
-                
+                // Recuperamos el objeto "vivo" del repositorio
                 Vehiculo v = repositorio.buscar(id);
                 vehiculosReconstruidos.add(v);
             } catch (VehiculoNoEncontradoException e) {
+                // Si el ID ya no existe en el inventario, se descarta de la cola
                 System.err.println("Advertencia: El vehículo ID " + id + " estaba en cola pero ya no existe en inventario.");
             }
         }

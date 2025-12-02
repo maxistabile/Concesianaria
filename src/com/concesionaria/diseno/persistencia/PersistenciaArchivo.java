@@ -5,7 +5,11 @@ import com.concesionaria.diseno.interfaces.Persistible;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * Implementación de persistencia basada en archivos binarios (Serialización de Java).
+ * Maneja las operaciones de Entrada/Salida (I/O) de forma genérica.
+ * * @param <T> Tipo de objeto a serializar. Debe implementar Serializable.
+ */
 public class PersistenciaArchivo<T> implements Persistible<T> {
     private String rutaArchivo;
     
@@ -39,7 +43,10 @@ public class PersistenciaArchivo<T> implements Persistible<T> {
             }
         }
     }
-    
+    /**
+     * Recupera la lista de objetos almacenados.
+     * Utiliza supresión de advertencias (unchecked) debido al cast de Object a List<T>.
+     */
     @Override
     @SuppressWarnings("unchecked")
     public List<T> cargar() throws PersistenciaException {

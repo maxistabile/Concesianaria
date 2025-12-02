@@ -2,14 +2,22 @@ package com.concesionaria.diseno.repositorio;
 
 import com.concesionaria.diseno.excepciones.*;
 import java.util.*;
-
+/**
+ * Implementación de un repositorio en memoria utilizando Generics.
+ * Permite realizar operaciones CRUD sobre cualquier tipo de objeto T.
+ * Utiliza un Map para garantizar acceso rápido (O(1)) y unicidad por ID.
+ * * @param <T> Tipo de dato a almacenar (en este proyecto, Vehiculo).
+ */
 public class RepositorioGenerico<T> {
     private Map<String, T> elementos;
     
     public RepositorioGenerico() {
         this.elementos = new LinkedHashMap<>();
     }
-    
+    /**
+     * Agrega un elemento al repositorio.
+     * @throws VehiculoDuplicadoException Si el ID ya existe en el mapa.
+     */
     public void agregar(String id, T elemento) throws VehiculoDuplicadoException {
         if (elementos.containsKey(id)) {
             throw new VehiculoDuplicadoException(id);
