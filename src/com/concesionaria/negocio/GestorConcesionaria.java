@@ -14,7 +14,7 @@ public class GestorConcesionaria {
             private PersistenciaArchivo<Vehiculo> persistencia;
             private static final String RUTA_ARCHIVO = "data/vehiculos.dat";
             private static final String RUTA_ARCHIVO_TALLER = "data/cola_taller.dat"; // New file for workshop queue
-            private PersistenciaArchivo<Vehiculo> persistenciaColaTaller; // New persistence for workshop queue
+            private PersistenciaArchivo<String> persistenciaColaTaller; // Ahora guarda Strings (IDs)
             private long proximoIdDisponible;        
                         public GestorConcesionaria() {
                             this.repositorio = new RepositorioGenerico<>();
@@ -220,47 +220,66 @@ public class GestorConcesionaria {
     
     // PERSISTENCIA
     private void guardarDatos() {
-        try {
-            persistencia.guardar(repositorio.listarTodos());
-            persistenciaColaTaller.guardar(taller.getVehiculosEnCola()); // Save workshop queue
-        } catch (PersistenciaException e) {
-            System.err.println("Error al guardar: " + e.getMessage());
-        }
+    try {
+        // 1. Guardamos el inventario completo (Objetos reales)
+        persistencia.guardar(repositorio.listarTodos());
+        
+        // 2. "Opción Perfecta": Extraemos SOLO los IDs de la cola
+        List<String> idsEnCola = taller.getVehiculosEnCola().stream()
+                                       .map(Vehiculo::getId)
+                                       .collect(Collectors.toList());
+        
+        // 3. Guardamos la lista de IDs
+        persistenciaColaTaller.guardar(idsEnCola);
+        
+    } catch (PersistenciaException e) {
+        System.err.println("Error al guardar: " + e.getMessage());
     }
+}
     
     private void cargarDatos() {
     try {
+        // 1. Cargar Inventario Principal
         List<Vehiculo> vehiculos = persistencia.cargar();
-        long maxId = 0; // Variable local para rastrear el ID máximo
-
+        long maxId = 0;
+        
         for (Vehiculo v : vehiculos) {
             try {
                 repositorio.agregar(v.getId(), v);
                 
-                // Lógica de cálculo de ID integrada aquí
+                // Cálculo de ID máximo integrado
                 long idActual = Long.parseLong(v.getId());
                 if (idActual > maxId) {
                     maxId = idActual;
                 }
-            } catch (VehiculoDuplicadoException e) {
-                // Ignorar o loguear
-                throw new RuntimeException("Error crítico de sistema: ID autogenerado colisionó.", e);
-            } catch (NumberFormatException e) {
-                // Manejar IDs corruptos si es necesario
+            } catch (VehiculoDuplicadoException | NumberFormatException e) {
+                // Ignorar inconsistencias
+            }
+        }
+        this.proximoIdDisponible = maxId + 1;
+
+        // 2. "Opción Perfecta": Reconstruir la cola usando los IDs
+        List<String> idsEnCola = persistenciaColaTaller.cargar();
+        List<Vehiculo> vehiculosReconstruidos = new ArrayList<>();
+        
+        for (String id : idsEnCola) {
+            try {
+                // AQUÍ ES LA CLAVE: Buscamos el objeto VIVO en el repositorio.
+                // Si editaste el color ayer, aquí traerá el auto con el color nuevo.
+                Vehiculo v = repositorio.buscar(id);
+                vehiculosReconstruidos.add(v);
+            } catch (VehiculoNoEncontradoException e) {
+                System.err.println("Advertencia: El vehículo ID " + id + " estaba en cola pero ya no existe en inventario.");
             }
         }
         
-        // Configurar el próximo ID disponible
-        this.proximoIdDisponible = maxId + 1;
-
-        // Carga del taller (sin cambios)
-        List<Vehiculo> colaTallerCargada = persistenciaColaTaller.cargar();
-        this.taller = new TallerRevision(colaTallerCargada);
+        // Inicializamos el taller con los objetos frescos del repositorio
+        this.taller = new TallerRevision(vehiculosReconstruidos);
 
     } catch (PersistenciaException e) {
-        System.err.println("Error al cargar datos: " + e.getMessage());
-        // Si falla la carga, asegurar que el ID arranque en 1
-        this.proximoIdDisponible = 1; 
+        System.err.println("Error al cargar: " + e.getMessage());
+        this.proximoIdDisponible = 1;
+        this.taller = new TallerRevision(); // Iniciar vacío si falla carga
     }
 }
     
