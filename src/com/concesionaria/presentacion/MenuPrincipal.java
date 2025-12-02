@@ -3,8 +3,8 @@ package com.concesionaria.presentacion;
 import com.concesionaria.diseno.enums.*;
 import com.concesionaria.diseno.excepciones.*;
 import com.concesionaria.diseno.modelo.*;
-import com.concesionaria.diseno.interfaces.Mantenible; // Added
-import com.concesionaria.diseno.interfaces.Lavable;   // Added
+import com.concesionaria.diseno.interfaces.Mantenible; 
+import com.concesionaria.diseno.interfaces.Lavable;   
 import com.concesionaria.negocio.GestorConcesionaria;
 import java.util.*;
 
@@ -102,7 +102,7 @@ public class MenuPrincipal {
         System.out.println("\n═══ AGREGAR NUEVO VEHÍCULO ═══\n");
 
         int tipo;
-        Vehiculo vehiculo = null; // Initialize vehiculo here
+        Vehiculo vehiculo = null; 
 
         do {
             System.out.println("Seleccione el tipo de vehículo:");
@@ -116,18 +116,15 @@ public class MenuPrincipal {
                 case 1:
                 case 2:
                 case 3:
-                    // Valid type, break the loop
                     break;
                 case 0:
                     System.out.println("Volviendo al menú principal...");
                     return;
                 default:
                     System.out.println("Tipo de vehículo no válido. Por favor, seleccione 1, 2 o 3.");
-                    // Loop will continue
             }
-        } while (tipo < 1 || tipo > 3); // Loop until a valid type is entered
+        } while (tipo < 1 || tipo > 3); 
 
-        // Only proceed to ask for details if type is valid
         String marca = leerCadena("Marca: ");
         String modelo = leerCadena("Modelo: ");
         
@@ -151,7 +148,7 @@ public class MenuPrincipal {
         Integer km = leerEntero("Kilometraje: ");
 
         // Crear una instancia temporal para mostrarla antes de confirmar
-        try { // Added try-catch here
+        try { 
             switch (tipo) {
                 case 1:
                     TipoCarroceriaAutomovil carroceriaAutomovil = seleccionarCarroceriaAutomovil();
@@ -166,7 +163,7 @@ public class MenuPrincipal {
                     vehiculo = new Motocicleta(marca, modelo, anio, color, km, tipoMoto);
                     break;
             }
-        } catch (DatosInvalidosException e) { // Catch the exception
+        } catch (DatosInvalidosException e) { 
             System.out.println("\nOperación de creación de vehículo cancelada: " + e.getMessage());
             return;
         }
@@ -177,10 +174,9 @@ public class MenuPrincipal {
 
         String confirmar = leerCadena("\n¿Confirma la creación de este vehículo? (S/N): ");
         if (confirmar.equalsIgnoreCase("S")) {
-            // Capture the returned vehicle with its assigned ID
-            vehiculo = gestor.agregarVehiculo(vehiculo); // MODIFIED LINE
+            vehiculo = gestor.agregarVehiculo(vehiculo); 
             System.out.println("\n¡Vehículo agregado exitosamente!");
-            System.out.println("ID asignado: " + vehiculo.getId()); // NEW LINE
+            System.out.println("ID asignado: " + vehiculo.getId()); 
             if (vehiculo.esUsado()) {
                 System.out.println("   Vehículo usado detectado. Ha sido añadido a la cola del taller automáticamente.");
             }
@@ -289,7 +285,7 @@ public class MenuPrincipal {
 
         Integer km = leerEnteroOpcional("Kilometraje [" + actual.getKilometraje() + "]: ");
         if (km != null) {
-            actual.setKilometraje(km); // Esto también actualiza el estado
+            actual.setKilometraje(km); 
         }
 
         if (actual instanceof Automovil) {
@@ -384,17 +380,20 @@ public class MenuPrincipal {
     }
 
     private void verColaTaller() {
-        System.out.println("\n═══ COLA DEL TALLER ═══\n");
-        int cantidad = gestor.cantidadVehiculosEnTaller();
-        System.out.println("Vehículos en espera de ser procesados: " + cantidad);
-
-        if (cantidad > 0) {
-            Vehiculo proximo = gestor.verProximoVehiculoTaller();
-            System.out.println("\nPróximo en la fila:");
-            List<Vehiculo> proximoVehiculoList = new ArrayList<>();
-            proximoVehiculoList.add(proximo);
-            imprimirTablaVehiculos(proximoVehiculoList);
-        }
+    System.out.println("\n═══ COLA DEL TALLER ═══\n");
+    
+    // Pedimos la lista completa al gestor
+    List<Vehiculo> enEspera = gestor.obtenerVehiculosEnCola();
+    
+    if (enEspera.isEmpty()) {
+        System.out.println("No hay vehículos en la cola del taller.");
+    } else {
+        System.out.println("Vehículos en espera de ser procesados: " + enEspera.size());
+        System.out.println("(Orden de prioridad: El de arriba es el próximo a atender)");
+        
+        
+        imprimirTablaVehiculos(enEspera);
+    }
     }
 
     private void verEstadisticas() {
@@ -546,40 +545,39 @@ public class MenuPrincipal {
     }
     
     private void limpiarPantalla() {
-        try {
-            String operatingSystem = System.getProperty("os.name");
-
-            if (operatingSystem.contains("Windows")) {
-                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
-            } else {
-                System.out.print("\033[H\033[2J");
-                System.out.flush();
-            }
-        } catch (Exception e) {
-            // Si falla, simplemente imprime algunas líneas en blanco como antes, pero menos.
-            for (int i = 0; i < 10; i++) {
-                System.out.println();
-            }
+        
+        for (int i = 0; i < 50; i++) {
+            System.out.println();
         }
     }
-    // Agrega este método privado en MenuPrincipal
+    
 private void imprimirTablaVehiculos(List<Vehiculo> vehiculos) {
     if (vehiculos.isEmpty()) {
         System.out.println("No hay vehículos para mostrar.");
         return;
     }
 
-    // New format string with two extra columns for Mant and Lav
-    String formato = "| %-4s | %-12s | %-15s | %-10s | %-6s | %-10s | %-12s | %-5s | %-6s |%n"; // Added %-5s and %-6s
+    
+    String formato = "| %-4s | %-12s | %-15s | %-10s | %-10s | %-12s | %-6s | %-10s | %-12s | %-5s | %-6s |%n";
 
-    // New header line
-    System.out.format("+------+--------------+-----------------+------------+--------+------------+--------------+-------+--------+%n");
-    System.out.format("| ID   | Tipo         | Marca           | Modelo     | Año    | KM         | Estado       | Mant. | Lav.   |%n"); // Added Mant. and Lav.
-    System.out.format("+------+--------------+-----------------+------------+--------+------------+--------------+-------+--------+%n");
+    
+    System.out.println("+------+--------------+-----------------+------------+------------+--------------+--------+------------+--------------+-------+--------+");
+    System.out.format("| ID   | Tipo         | Marca           | Modelo     | Color      | Carrocería   | Año    | KM         | Estado       | Mant. | Lav.   |%n");
+    System.out.println("+------+--------------+-----------------+------------+------------+--------------+--------+------------+--------------+-------+--------+");
 
     for (Vehiculo v : vehiculos) {
         String mantenimientoStatus = "N/A";
         String lavadoStatus = "N/A";
+        
+        
+        String detalleEspecifico = "";
+        if (v instanceof Automovil) {
+            detalleEspecifico = ((Automovil) v).getCarroceria().getDescripcion();
+        } else if (v instanceof Camioneta) {
+            detalleEspecifico = ((Camioneta) v).getCarroceria().getDescripcion();
+        } else if (v instanceof Motocicleta) {
+            detalleEspecifico = ((Motocicleta) v).getTipoMoto().getDescripcion();
+        }
 
         if (v.esUsado()) {
             if (v instanceof Mantenible) {
@@ -590,19 +588,22 @@ private void imprimirTablaVehiculos(List<Vehiculo> vehiculos) {
             }
         }
         
+        
         System.out.format(formato, 
             v.getId(), 
             v.getTipoVehiculo(), 
             cortarString(v.getMarca(), 15), 
-            cortarString(v.getModelo(), 10), 
+            cortarString(v.getModelo(), 10),
+            v.getColor().getDescripcion(),      
+            cortarString(detalleEspecifico, 12), 
             v.getAnio(), 
             v.getKilometraje(),
             v.getEstado().getDescripcion(),
-            mantenimientoStatus, // New column
-            lavadoStatus         // New column
+            mantenimientoStatus,
+            lavadoStatus
         );
     }
-    System.out.format("+------+--------------+-----------------+------------+--------+------------+--------------+-------+--------+%n");
+    System.out.println("+------+--------------+-----------------+------------+------------+--------------+--------+------------+--------------+-------+--------+");
 }
 
 // Método auxiliar para que no se rompa la tabla si el texto es muy largo

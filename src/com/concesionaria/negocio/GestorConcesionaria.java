@@ -13,14 +13,14 @@ public class GestorConcesionaria {
         private TallerRevision taller;
             private PersistenciaArchivo<Vehiculo> persistencia;
             private static final String RUTA_ARCHIVO = "data/vehiculos.dat";
-            private static final String RUTA_ARCHIVO_TALLER = "data/cola_taller.dat"; // New file for workshop queue
-            private PersistenciaArchivo<String> persistenciaColaTaller; // Ahora guarda Strings (IDs)
+            private static final String RUTA_ARCHIVO_TALLER = "data/cola_taller.dat"; 
+            private PersistenciaArchivo<String> persistenciaColaTaller; 
             private long proximoIdDisponible;        
                         public GestorConcesionaria() {
                             this.repositorio = new RepositorioGenerico<>();
-                            this.taller = new TallerRevision(); // Always initialize to prevent NPE
+                            this.taller = new TallerRevision(); 
                             this.persistencia = new PersistenciaArchivo<>(RUTA_ARCHIVO);
-                            this.persistenciaColaTaller = new PersistenciaArchivo<>(RUTA_ARCHIVO_TALLER); // Initialize new persistence
+                            this.persistenciaColaTaller = new PersistenciaArchivo<>(RUTA_ARCHIVO_TALLER); 
                             cargarDatos();
                         }        
             private String generarProximoId() {
@@ -31,14 +31,14 @@ public class GestorConcesionaria {
         
             
         
-// CREATE
+
     public Vehiculo agregarVehiculo(Vehiculo vehiculo) throws VehiculoException {
         validarVehiculo(vehiculo);
 
         String nuevoId = generarProximoId();
         vehiculo.setId(nuevoId);
 
-        // --- INICIO DEL CAMBIO ---
+        
         try {
             // Intentamos agregar. Si falla, es un error interno grave del autoincremental.
             repositorio.agregar(vehiculo.getId(), vehiculo);
@@ -46,7 +46,7 @@ public class GestorConcesionaria {
             // Lo convertimos en un error de sistema (Runtime) para no obligar al Menú a manejarlo.
             throw new RuntimeException("Error crítico interno: El sistema generó un ID duplicado (" + nuevoId + ").", e);
         }
-        // --- FIN DEL CAMBIO ---
+        
 
         if (vehiculo.esUsado()) {
             try {
@@ -61,7 +61,7 @@ public class GestorConcesionaria {
         return vehiculo;
     }
     
-    // READ
+    
     public Vehiculo buscarVehiculo(String id) throws VehiculoNoEncontradoException {
         return repositorio.buscar(id);
     }
@@ -82,7 +82,7 @@ public class GestorConcesionaria {
                 .collect(Collectors.toList());
     }
     
-    // UPDATE
+    
     public void actualizarVehiculo(String id, Vehiculo vehiculoActualizado) throws VehiculoException {
     validarVehiculo(vehiculoActualizado);
     
@@ -106,7 +106,7 @@ public class GestorConcesionaria {
     guardarDatos();
 }
     
-    // DELETE
+    
     public void eliminarVehiculo(String id) throws VehiculoException {
         repositorio.eliminar(id);
         guardarDatos();
@@ -115,16 +115,14 @@ public class GestorConcesionaria {
     // TALLER
     
     public void procesarVehiculoTaller() throws TallerException {
-    // 1. Sacamos el vehículo de la cola (este objeto puede tener datos viejos, ej: color viejo)
-    // Pero TIENE el estado nuevo de mantenimiento/lavado porque acaba de salir del taller.
+    
     Vehiculo vehiculoDeLaCola = taller.procesarVehiculo(); 
     
     try {
-        // 2. Buscamos la versión "fresca" en el repositorio principal (tiene el color nuevo)
+        
         Vehiculo vehiculoDelRepo = repositorio.buscar(vehiculoDeLaCola.getId());
         
-        // 3. PASO CLAVE: Copiamos los flags de "ya atendido" del objeto de la cola al objeto del repo.
-        // Hacemos casting seguro para acceder a los métodos de las interfaces/clases.
+       
         
         if (vehiculoDeLaCola instanceof Automovil && vehiculoDelRepo instanceof Automovil) {
             ((Automovil) vehiculoDelRepo).setMantenimientoRealizado(true); // Asumimos que el taller lo hizo
@@ -137,7 +135,7 @@ public class GestorConcesionaria {
             ((Motocicleta) vehiculoDelRepo).setLavado(true);
         }
         
-        // 4. Guardamos la versión del repo (que ahora tiene el color bien Y el mantenimiento hecho)
+        
         repositorio.actualizar(vehiculoDelRepo.getId(), vehiculoDelRepo); 
         
     } catch (VehiculoNoEncontradoException e) {
@@ -145,13 +143,17 @@ public class GestorConcesionaria {
         System.err.println("Advertencia: El vehículo procesado ya no existe en el inventario principal.");
     }
     
-    // 5. Guardamos ambos archivos para que todo quede sincronizado
+    //  Guardamos ambos archivos para que todo quede sincronizado
     guardarDatos(); 
 }
-    
+    public List<Vehiculo> obtenerVehiculosEnCola() {
+    return taller.getVehiculosEnCola();
+    }    
+
     public int cantidadVehiculosEnTaller() {
         return taller.cantidadEnEspera();
     }
+    
     
     public boolean tallerTieneVehiculos() {
         return taller.tieneVehiculosEnEspera();
@@ -187,7 +189,7 @@ public class GestorConcesionaria {
         // 1. Guardamos el inventario completo (Objetos reales)
         persistencia.guardar(repositorio.listarTodos());
         
-        // 2. "Opción Perfecta": Extraemos SOLO los IDs de la cola
+        // 2. Extraemos SOLO los IDs de la cola
         List<String> idsEnCola = taller.getVehiculosEnCola().stream()
                                        .map(Vehiculo::getId)
                                        .collect(Collectors.toList());
@@ -221,14 +223,13 @@ public class GestorConcesionaria {
         }
         this.proximoIdDisponible = maxId + 1;
 
-        // 2. "Opción Perfecta": Reconstruir la cola usando los IDs
+        // 2. Reconstruir la cola usando los IDs
         List<String> idsEnCola = persistenciaColaTaller.cargar();
         List<Vehiculo> vehiculosReconstruidos = new ArrayList<>();
         
         for (String id : idsEnCola) {
             try {
-                // AQUÍ ES LA CLAVE: Buscamos el objeto VIVO en el repositorio.
-                // Si editaste el color ayer, aquí traerá el auto con el color nuevo.
+                
                 Vehiculo v = repositorio.buscar(id);
                 vehiculosReconstruidos.add(v);
             } catch (VehiculoNoEncontradoException e) {
@@ -236,7 +237,7 @@ public class GestorConcesionaria {
             }
         }
         
-        // Inicializamos el taller con los objetos frescos del repositorio
+        
         this.taller = new TallerRevision(vehiculosReconstruidos);
 
     } catch (PersistenciaException e) {
@@ -246,7 +247,7 @@ public class GestorConcesionaria {
     }
 }
     
-    // ESTADÍSTICAS (Uso de Wrappers)
+    // ESTADÍSTICAS
     public Map<String, Integer> obtenerEstadisticas() {
         Map<String, Integer> stats = new HashMap<>();
         

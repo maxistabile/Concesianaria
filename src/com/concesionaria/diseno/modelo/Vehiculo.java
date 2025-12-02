@@ -31,7 +31,7 @@ public abstract class Vehiculo implements Serializable {
     public abstract String getTipoVehiculo();
     public abstract String obtenerDetallesEspecificos();
     
-    // Getters y Setters (JavaBean)
+    // Getters y Setters 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     
